@@ -8,6 +8,7 @@ import (
 	"github.com/mymmrac/telego"
 	th "github.com/mymmrac/telego/telegohandler"
 	tu "github.com/mymmrac/telego/telegoutil"
+	"github.com/nktauserum/aisearch-telegram/pkg/parse"
 	"github.com/nktauserum/aisearch-telegram/pkg/stream"
 )
 
@@ -51,7 +52,7 @@ func Search(ctx *th.Context, message telego.Message) error {
 				return err
 			}
 
-			currentText = currentText + response.Content
+			currentText, err = parse.Parse(currentText + response.Content)
 			ctx.Bot().EditMessageText(ctx, tu.EditMessageText(tu.ID(msg.Chat.ID), msg.MessageID, currentText))
 		} else if res.Event == stream.Source {
 			currentText = fmt.Sprintf("%s\n%s", currentText, res.Content)
