@@ -1,6 +1,7 @@
 package parse
 
 import (
+	"bytes"
 	"strings"
 
 	md "github.com/JohannesKaufmann/html-to-markdown/v2"
@@ -49,6 +50,7 @@ func ConvertToMarkdown(html *string) (string, error) {
 }
 
 func ConvertToHTML(input string) (string, error) {
+
 	// Хер знает, почему, но программа отказывается видеть содержимое тегов <source> и <link>
 	// Именно поэтому я просто заменил все проблемные теги на <a>
 	// Если вы знаете, как решить эту проблему, напишите пожалуйста t.me/Auserum
@@ -63,10 +65,12 @@ func ConvertToHTML(input string) (string, error) {
 		return "", err
 	}
 
+	// Преобразование тега <heading> в <strong>
 	doc.Find("heading").Each(func(i int, s *goquery.Selection) {
 		s.ReplaceWithHtml("<strong>" + s.Text() + "</strong>")
 	})
 
+	// Преобразование тегов <a>
 	doc.Find("a").Each(func(i int, s *goquery.Selection) {
 		url, ok := s.Attr("href")
 		if ok {
@@ -74,10 +78,12 @@ func ConvertToHTML(input string) (string, error) {
 		}
 	})
 
+	// Обработка тега <pre> с вложенным <code>
 	doc.Find("pre").Each(func(i int, s *goquery.Selection) {
 		s.ReplaceWithHtml("<p><code>" + s.Text() + "</code></p>")
 	})
 
+	// Обработка тега <code> с атрибутом lang
 	doc.Find("code").Each(func(i int, s *goquery.Selection) {
 		lang, ok := s.Attr("lang")
 		if ok {
@@ -85,10 +91,12 @@ func ConvertToHTML(input string) (string, error) {
 		}
 	})
 
-	html, err := doc.Html()
-	if err != nil {
+	// Получаем итоговый HTML
+	var buf bytes.Buffer
+	if err := goquery.Render(&buf, doc.Selection); err != nil {
 		return "", err
 	}
+	html := buf.String()
 
 	return html, nil
 }

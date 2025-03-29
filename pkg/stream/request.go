@@ -25,6 +25,7 @@ var (
 
 func Request(query string) chan Chunk {
 	result := make(chan Chunk)
+	errors := make(chan error)
 	request := make(map[string]string)
 	request["query"] = query
 
@@ -32,6 +33,7 @@ func Request(query string) chan Chunk {
 	if err != nil {
 		result <- Chunk{Event: Error, Content: fmt.Sprintf("error while marshalling request: %v", err)}
 		close(result)
+		errors <- err
 		return result
 	}
 
@@ -41,9 +43,15 @@ func Request(query string) chan Chunk {
 
 		resp, err := http.Post("http://localhost:8081/api/v1/stream", "application/json", bytes.NewReader(data))
 		if err != nil {
+			errors <- err
 			return
 		}
 		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			errors <- fmt.Errorf("request failed: %d", resp.StatusCode)
+			return
+		}
 
 		scanner := bufio.NewScanner(resp.Body)
 		for scanner.Scan() {
@@ -82,6 +90,7 @@ func Request(query string) chan Chunk {
 		}
 
 		if err := scanner.Err(); err != nil {
+			errors <- err
 			return
 		}
 	}()
